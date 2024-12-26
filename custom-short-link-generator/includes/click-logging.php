@@ -38,11 +38,6 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-/*function short_links_rewrite_rules() {
-    add_rewrite_rule('^([a-zA-Z0-9-_]+)/?$', 'index.php?short_link_redirect=$matches[1]', 'top');
-}
-add_action('init', 'short_links_rewrite_rules');*/
-
 function short_links_rewrite_rules() {
     global $wpdb;
     $slugs = $wpdb->get_col("SELECT meta_value FROM {$wpdb->prefix}postmeta WHERE meta_key = '_custom_slug'");

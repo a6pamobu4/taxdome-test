@@ -14,6 +14,7 @@ add_action('admin_menu', 'cslg_admin_menu');
  * С добавлением screen options
  * не сохраняются настройки столбцов, количество постов работает - доделать
  * */
+
 /*function cslg_admin_menu() {
  
     global $cslg_admin_page;
@@ -56,7 +57,41 @@ function test_table_set_option($status, $option, $value) {
   return $value;
 }*/
 
-function cslg_admin_page_init() {
+function cslg_handle_delete_action() {
+    // Удаление ссылки
+    if (isset($_REQUEST['action']) && $_REQUEST['action'] === 'delete' && !empty($_REQUEST['element'])) {
+        if (!wp_verify_nonce($_REQUEST['_wpnonce'], 'delete_short_link')) {
+            wp_die(__('Security check failed.'));
+        }
+
+        $element_id = intval($_REQUEST['element']);
+
+        // Проверка прав пользователя
+        if (!current_user_can('delete_post', $element_id)) {
+            wp_die(__('У Вас нет прав на удаление.'));
+        }
+
+        // Удаление короткой ссылки
+        if (wp_delete_post($element_id, true)) {
+            flush_rewrite_rules();
+            error_log('Redirecting to: ' . admin_url('admin.php?page=short_link_generator&message=deleted'));
+            wp_redirect(admin_url('admin.php?page=short_link_generator&message=deleted'));
+            exit;
+        } else {
+            wp_die(__('Не удалось удалить короткую ссылку.'));
+        }
+    }
+}
+add_action('admin_init', 'cslg_handle_delete_action');
+
+
+function cslg_admin_page_init() {    
+
+    if (isset($_REQUEST['message']) && $_REQUEST['message'] === 'deleted') {
+        echo '<div class="updated"><p>Короткая ссылка успешно удалена.</p></div>';
+    }
+
+    // Форма создания новой ссылки
     if (isset($_POST['cslg_submit'])) {
         $name = sanitize_text_field($_POST['name']);
         $original_url = esc_url_raw($_POST['original_url']);
@@ -81,7 +116,7 @@ function cslg_admin_page_init() {
         }
     }
 
-    // Display the form and the list table
+    // Отображение таблицы ссылок
     ?>
     <div class="wrap">
         <h1>Сокращатель ссылок</h1>
@@ -103,7 +138,8 @@ function cslg_admin_page_init() {
             <?php submit_button('Сократить ссылку', 'primary', 'cslg_submit'); ?>
         </form>
 
-        <form method="post">
+        <form method="get">
+            <input type="hidden" name="page" value="short_link_generator">
             <?php
             $short_links_table = new CSLG_Short_Links_Table();
             $short_links_table->prepare_items();

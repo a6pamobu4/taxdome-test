@@ -24,6 +24,7 @@ require_once plugin_dir_path(__FILE__) . 'includes/short-links-table.php';
 // Initialize the plugin
 function cslg_activate() {
     cslg_create_click_logs_table();
+    short_links_rewrite_rules();
     flush_rewrite_rules();
 }
 register_activation_hook(__FILE__, 'cslg_activate');

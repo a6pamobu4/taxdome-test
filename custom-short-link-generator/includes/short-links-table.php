@@ -16,10 +16,10 @@ class CSLG_Short_Links_Table extends WP_List_Table {
         return [
         	'cb'           => '<input type="checkbox" />',
             'name'         => 'Название',
-            'original_url' => 'Original URL',
+            'original_url' => 'Исходный URL',
             'custom_slug'  => 'Короткий адрес',
-            'date_created' => 'Date Created',
-            'clicks'       => 'Clicks',
+            'date_created' => 'Дата',
+            'clicks'       => 'Переходы',
         ];
     }
 
@@ -32,6 +32,7 @@ class CSLG_Short_Links_Table extends WP_List_Table {
     }
 
     public function prepare_items() {
+        $this->process_bulk_action();
 	    $columns = $this->get_columns();
 	    $hidden = [];
 	    /*$hidden = ( is_array(get_user_meta( get_current_user_id(), 'agetoplevel_page_supporthost_list_tablecolumnshidden', true)) ) ? get_user_meta( get_current_user_id(), 'managetoplevel_page_supporthost_list_tablecolumnshidden', true) : array();*/
@@ -56,7 +57,7 @@ class CSLG_Short_Links_Table extends WP_List_Table {
             FROM $table_name p
             WHERE p.post_type = 'short_link'";
 
-        // Apply search filter
+        // Обработка поиска
         if (!empty($search)) {
             $data .= $wpdb->prepare(" AND (p.post_title LIKE %s OR 
                 EXISTS (
@@ -70,15 +71,13 @@ class CSLG_Short_Links_Table extends WP_List_Table {
 
         $data = $wpdb->get_results($data, ARRAY_A);
 
-	    // Handle pagination
+	    // Пагинация
 	    $per_page = $this->get_items_per_page('elements_per_page', 10);
 	    $current_page = $this->get_pagenum();
 	    $total_items = count($data);
 
-	    // Slice data for pagination
 	    $data = array_slice($data, ($current_page - 1) * $per_page, $per_page);
 
-	    // Set pagination arguments
 	    $this->set_pagination_args([
 	        'total_items' => $total_items,
 	        'per_page'    => $per_page,
@@ -97,7 +96,7 @@ class CSLG_Short_Links_Table extends WP_List_Table {
 	        case 'original_url':
 	            return '<a href="' . esc_url($item['original_url']) . '" target="_blank">' . esc_html($item['original_url']) . '</a>';
 	        case 'custom_slug':
-	            return '<a href="' . esc_url(home_url($item['custom_slug'])) . '" target="_blank">' . esc_html($item['custom_slug']) . '</a>';
+	            return '<a href="' . esc_url(home_url($item['custom_slug'])) . '" target="_blank">' . esc_url(home_url($item['custom_slug'])) . '</a>';
 	        case 'date_created':
 	            return esc_html($item['date_created']);
 	        case 'clicks':
@@ -114,21 +113,19 @@ class CSLG_Short_Links_Table extends WP_List_Table {
         );
     }
 
-    // Adding action links to column
-    /*function column_name($item)
-    {
-        $actions = array(
-            'edit'      => sprintf('<a href="?page=%s&action=%s&element=%s">' . 'Редактировать' . '</a>', $_REQUEST['page'], 'edit', $item['id']),
-            'delete'    => sprintf('<a href="?page=%s&action=%s&element=%s">' . 'Удалить' . '</a>', $_REQUEST['page'], 'delete', $item['id']),
-        );
-
-        return sprintf('%1$s %2$s', $item['name'], $this->row_actions($actions));
-    }*/
-
-    function column_name($item) {
+    // Редактирование и удаление ссылок
+    public function column_name($item) {
         $actions = [
-            'edit'   => sprintf('<a href="?page=short_link_generator&action=edit&element=%s">Edit</a>', $item['id']),
-            'delete' => sprintf('<a href="?page=short_link_generator&action=delete&element=%s" onclick="return confirm(\'Уверены, что хотите удалить эту ссылку?\')">Delete</a>', $item['id']),
+            'edit' => sprintf(
+                '<a href="%s">Редактировать</a>',
+                admin_url('post.php?post=' . $item['id'] . '&action=edit')
+            ),
+            'delete' => sprintf(
+                '<a href="?page=short_link_generator&action=delete&element=%s&_wpnonce=%s" onclick="return confirm(\'Вы уверены, что хотите удалить эту ссылку?\')">Удалить</a>',
+                $item['id'],
+                wp_create_nonce('delete_short_link')
+            ),
+
         ];
 
         return sprintf('%1$s %2$s', $item['name'], $this->row_actions($actions));
@@ -136,19 +133,19 @@ class CSLG_Short_Links_Table extends WP_List_Table {
 
     function get_bulk_actions() {
         return [
-        	'delete'        => 'Удалить',
+        	'delete' => 'Удалить',
         ];
     }
 
-    function process_bulk_action() {
+    public function process_bulk_action() {
         if ('delete' === $this->current_action()) {
             $ids = isset($_REQUEST['element']) ? $_REQUEST['element'] : [];
-            if (is_array($ids)) {
+            if (!empty($ids) && is_array($ids)) {
                 foreach ($ids as $id) {
-                    wp_delete_post($id, true);
+                    if (current_user_can('delete_post', $id)) {
+                        wp_delete_post($id, true);
+                    }
                 }
-            } else {
-                wp_delete_post($ids, true);
             }
         }
     }

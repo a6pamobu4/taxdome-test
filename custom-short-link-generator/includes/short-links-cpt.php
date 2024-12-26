@@ -27,13 +27,15 @@ function register_short_links_cpt() {
     ];
 
     register_post_type('short_link', $args);
+    flush_rewrite_rules();
 }
+add_action('init', 'register_short_links_cpt');
 
 // Add meta boxes for additional fields
 function short_links_meta_boxes() {
     add_meta_box(
         'short_link_meta',
-        'Short Link Details',
+        'Детали короткой ссылки',
         'short_link_meta_box_callback',
         'short_link',
         'normal',
@@ -53,7 +55,7 @@ function short_link_meta_box_callback($post) {
     echo '<input type="text" id="custom_slug" name="custom_slug" value="' . esc_attr($custom_slug) . '" style="width:100%;">';
 }
 
-// Save meta fields
+// Редактирование мета полей короткой ссылки
 function save_short_link_meta($post_id) {
     if (array_key_exists('original_url', $_POST)) {
         update_post_meta($post_id, '_original_url', esc_url_raw($_POST['original_url']));
@@ -61,24 +63,15 @@ function save_short_link_meta($post_id) {
     if (array_key_exists('custom_slug', $_POST)) {
         update_post_meta($post_id, '_custom_slug', sanitize_title($_POST['custom_slug']));
     }
+    //flush_rewrite_rules();
 }
 add_action('save_post', 'save_short_link_meta');
 
-/*if (!defined('ABSPATH')) {
-    exit;
+// Flush rewrite rules при создании/редактировании ссылки
+function flush_rewrite_rules_on_short_link_save($post_id, $post, $update) {
+    if ($post->post_type === 'short_link') {
+        flush_rewrite_rules();
+    }
 }
-
-function cslg_register_short_links_cpt() {
-    register_post_type('short_link', [
-        'labels' => [
-            'name'          => 'Short Links',
-            'singular_name' => 'Short Link',
-        ],
-        'public'      => false,
-        'show_ui'     => false,
-        'supports'    => ['title'],
-        'menu_icon'   => 'dashicons-admin-links',
-    ]);
-}
-add_action('init', 'cslg_register_short_links_cpt');*/
+add_action('save_post', 'flush_rewrite_rules_on_short_link_save', 10, 3);
 
