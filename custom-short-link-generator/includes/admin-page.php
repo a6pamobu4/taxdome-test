@@ -97,6 +97,11 @@ function cslg_admin_page_init() {
         $original_url = esc_url_raw($_POST['original_url']);
         $custom_slug = sanitize_title($_POST['custom_slug']);
 
+        // Генерируем короткую ссылку, если поле оставили пустым
+        if (empty($custom_slug)) {
+            $custom_slug = cslg_generate_default_slug();
+        }
+
         if (!empty($name) && !empty($original_url) && !empty($custom_slug)) {
             $post_id = wp_insert_post([
                 'post_title'  => $name,
@@ -132,7 +137,7 @@ function cslg_admin_page_init() {
                 </tr>
                 <tr>
                     <th><label for="custom_slug">Адрес короткой ссылки</label></th>
-                    <td><input type="text" id="custom_slug" name="custom_slug" required></td>
+                    <td><input type="text" id="custom_slug" name="custom_slug" value="<?php echo cslg_generate_default_slug(); ?>"></td>
                 </tr>
             </table>
             <?php submit_button('Сократить ссылку', 'primary', 'cslg_submit'); ?>
@@ -149,4 +154,23 @@ function cslg_admin_page_init() {
         </form>
     </div>
     <?php
+}
+
+/**
+ * Генерация дефолтной короткой ссылки, 6 цифробукв
+ * */
+function cslg_generate_default_slug() {
+    global $wpdb;
+
+    do {
+        $slug = substr(str_shuffle('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'), 0, 6);
+
+        // Проверка на дубли
+        $exists = $wpdb->get_var($wpdb->prepare("
+            SELECT COUNT(*) FROM {$wpdb->prefix}postmeta
+            WHERE meta_key = '_custom_slug' AND meta_value = %s
+        ", $slug));
+    } while ($exists);
+
+    return $slug;
 }
