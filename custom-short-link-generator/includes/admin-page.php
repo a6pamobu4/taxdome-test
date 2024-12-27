@@ -84,8 +84,67 @@ function cslg_handle_delete_action() {
 }
 add_action('admin_init', 'cslg_handle_delete_action');
 
+function cslg_display_click_details($short_link_id) {
+    global $wpdb;
+
+    // Retrieve the short link data
+    $short_link = get_post($short_link_id);
+    if (!$short_link || $short_link->post_type !== 'short_link') {
+        echo '<div class="error"><p>Invalid short link.</p></div>';
+        return;
+    }
+
+    // Fetch clicks for the short link
+    $slug = get_post_meta($short_link_id, '_custom_slug', true);
+    $table_name = $wpdb->prefix . 'cslg_click_logs';
+    $clicks = $wpdb->get_results($wpdb->prepare("
+        SELECT * FROM $table_name WHERE short_slug = %s ORDER BY click_time DESC
+    ", $slug));
+
+    // Render the clicks
+    ?>
+    <div class="wrap">
+        <h1>Click Details for <?php echo esc_html($short_link->post_title); ?></h1>
+        <p><strong>Original URL:</strong> <a href="<?php echo esc_url(get_post_meta($short_link_id, '_original_url', true)); ?>" target="_blank"><?php echo esc_url(get_post_meta($short_link_id, '_original_url', true)); ?></a></p>
+        <p><strong>Short Link:</strong> <a href="<?php echo esc_url(home_url($slug)); ?>" target="_blank"><?php echo esc_url(home_url($slug)); ?></a></p>
+
+        <table class="widefat fixed">
+            <thead>
+                <tr>
+                    <th>Click Time</th>
+                    <th>IP Address</th>
+                    <th>Referrer</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (!empty($clicks)): ?>
+                    <?php foreach ($clicks as $click): ?>
+                        <tr>
+                            <td><?php echo esc_html($click->click_time); ?></td>
+                            <td><?php echo esc_html($click->ip_address); ?></td>
+                            <td><?php echo esc_html($click->referrer ?: 'Direct'); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="3">Пока нет переходов.</td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+
+        <p><a href="<?php echo esc_url(admin_url('admin.php?page=short_link_generator')); ?>" class="button">Назад к списку коротких ссылок</a></p>
+    </div>
+    <?php
+}
+
 
 function cslg_admin_page_init() {    
+
+    if (isset($_GET['view']) && $_GET['view'] === 'details' && !empty($_GET['short_link_id'])) {
+        cslg_display_click_details(intval($_GET['short_link_id']));
+        return; // Exit to prevent the main table from rendering
+    }
 
     if (isset($_REQUEST['message']) && $_REQUEST['message'] === 'deleted') {
         echo '<div class="updated"><p>Короткая ссылка успешно удалена.</p></div>';

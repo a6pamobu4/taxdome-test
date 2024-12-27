@@ -115,20 +115,32 @@ class CSLG_Short_Links_Table extends WP_List_Table {
 
     // Редактирование и удаление ссылок
     public function column_name($item) {
-        $actions = [
-            'edit' => sprintf(
-                '<a href="%s">Редактировать</a>',
-                admin_url('post.php?post=' . $item['id'] . '&action=edit')
-            ),
-            'delete' => sprintf(
-                '<a href="?page=short_link_generator&action=delete&element=%s&_wpnonce=%s" onclick="return confirm(\'Вы уверены, что хотите удалить эту ссылку?\')">Удалить</a>',
-                $item['id'],
-                wp_create_nonce('delete_short_link')
-            ),
+        // Link to the click details page
+        $details_link = admin_url('admin.php?page=short_link_generator&view=details&short_link_id=' . $item['id']);
 
+        // Link to the edit post page
+        $edit_link = admin_url('post.php?post=' . $item['id'] . '&action=edit');
+
+        // Link to delete the short link with nonce
+        $delete_link = admin_url('admin.php?page=short_link_generator&action=delete&element=' . $item['id'] . '&_wpnonce=' . wp_create_nonce('delete_short_link'));
+
+        // Format the actions
+        $actions = [
+            'details' => sprintf('<a href="%s">View Clicks</a>', esc_url($details_link)),
+            'edit'    => sprintf('<a href="%s">Edit</a>', esc_url($edit_link)),
+            'delete'  => sprintf(
+                '<a href="%s" onclick="return confirm(\'Are you sure you want to delete this short link?\')">Delete</a>',
+                esc_url($delete_link)
+            ),
         ];
 
-        return sprintf('%1$s %2$s', $item['name'], $this->row_actions($actions));
+        // Make the name clickable and append row actions
+        return sprintf(
+            '<a href="%s">%s</a> %s',
+            esc_url($details_link),
+            esc_html($item['name']),
+            $this->row_actions($actions)
+        );
     }
 
     function get_bulk_actions() {
