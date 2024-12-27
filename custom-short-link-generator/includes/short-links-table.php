@@ -3,6 +3,9 @@ if (!class_exists('WP_List_Table')) {
     require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 }
 
+/**
+ * Создаем класс для таблицы коротких ссылок
+ * */
 class CSLG_Short_Links_Table extends WP_List_Table {
     public function __construct() {
         parent::__construct([
@@ -35,7 +38,6 @@ class CSLG_Short_Links_Table extends WP_List_Table {
         $this->process_bulk_action();
 	    $columns = $this->get_columns();
 	    $hidden = [];
-	    /*$hidden = ( is_array(get_user_meta( get_current_user_id(), 'agetoplevel_page_supporthost_list_tablecolumnshidden', true)) ) ? get_user_meta( get_current_user_id(), 'managetoplevel_page_supporthost_list_tablecolumnshidden', true) : array();*/
 	    $sortable = $this->get_sortable_columns();
 
 	    $this->_column_headers = [$columns, $hidden, $sortable];
@@ -43,6 +45,7 @@ class CSLG_Short_Links_Table extends WP_List_Table {
 	    global $wpdb;
         $table_name = $wpdb->prefix . 'posts';
         $meta_table = $wpdb->prefix . 'postmeta';
+        $click_table = $wpdb->prefix . 'cslg_click_logs';
         $search = isset($_REQUEST['s']) ? sanitize_text_field($_REQUEST['s']) : '';
 
         $orderby = !empty($_REQUEST['orderby']) ? sanitize_sql_orderby($_REQUEST['orderby']) : 'date_created';
@@ -52,8 +55,7 @@ class CSLG_Short_Links_Table extends WP_List_Table {
             SELECT p.ID as id, p.post_title AS name, p.post_date AS date_created, 
                 (SELECT meta_value FROM $meta_table WHERE post_id = p.ID AND meta_key = '_original_url') AS original_url,
                 (SELECT meta_value FROM $meta_table WHERE post_id = p.ID AND meta_key = '_custom_slug') AS custom_slug,
-                (SELECT COUNT(*) FROM {$wpdb->prefix}cslg_click_logs WHERE short_slug = 
-                    (SELECT meta_value FROM $meta_table WHERE post_id = p.ID AND meta_key = '_custom_slug')) AS clicks
+                (SELECT COUNT(*) FROM $click_table WHERE post_id = p.ID) AS clicks
             FROM $table_name p
             WHERE p.post_type = 'short_link'";
 
@@ -66,7 +68,6 @@ class CSLG_Short_Links_Table extends WP_List_Table {
                 ))", "%$search%", "%$search%");
         }
 
-        // Apply ordering
         $data .= " ORDER BY $orderby $order";
 
         $data = $wpdb->get_results($data, ARRAY_A);
@@ -87,7 +88,6 @@ class CSLG_Short_Links_Table extends WP_List_Table {
 	    $this->items = $data;
 	}
 
-
     public function column_default($item, $column_name) {
 	    switch ($column_name) {
 	    	case 'id':
@@ -102,7 +102,7 @@ class CSLG_Short_Links_Table extends WP_List_Table {
 	        case 'clicks':
 	            return intval($item['clicks']);
 	        default:
-	            return print_r($item, true); // Debugging
+	            return print_r($item, true);
 	    }
 	}
 
@@ -115,16 +115,11 @@ class CSLG_Short_Links_Table extends WP_List_Table {
 
     // Редактирование и удаление ссылок
     public function column_name($item) {
-        // Link to the click details page
+
         $details_link = admin_url('tools.php?page=short_link_generator&view=details&short_link_id=' . $item['id']);
-
-        // Link to the edit post page
         $edit_link = admin_url('post.php?post=' . $item['id'] . '&action=edit');
-
-        // Link to delete the short link with nonce
         $delete_link = admin_url('tools.php?page=short_link_generator&action=delete&element=' . $item['id'] . '&_wpnonce=' . wp_create_nonce('delete_short_link'));
 
-        // Format the actions
         $actions = [
             'details' => sprintf('<a href="%s">View Clicks</a>', esc_url($details_link)),
             'edit'    => sprintf('<a href="%s">Edit</a>', esc_url($edit_link)),
@@ -134,7 +129,6 @@ class CSLG_Short_Links_Table extends WP_List_Table {
             ),
         ];
 
-        // Make the name clickable and append row actions
         return sprintf(
             '<a href="%s">%s</a> %s',
             esc_url($details_link),

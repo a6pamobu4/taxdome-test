@@ -1,4 +1,8 @@
 <?php
+
+/**
+ * Создание CPT коротких ссылок
+ * */
 function register_short_links_cpt() {
     $labels = [
         'name'               => 'Сокращатель ссылок',
@@ -31,7 +35,9 @@ function register_short_links_cpt() {
 }
 add_action('init', 'register_short_links_cpt');
 
-// Add meta boxes for additional fields
+/**
+ * Добавление мета полей для коротких ссылок
+ * */
 function short_links_meta_boxes() {
     add_meta_box(
         'short_link_meta',
@@ -55,7 +61,9 @@ function short_link_meta_box_callback($post) {
     echo '<input type="text" id="custom_slug" name="custom_slug" value="' . esc_attr($custom_slug) . '" style="width:100%;">';
 }
 
-// Редактирование мета полей короткой ссылки
+/**
+ * Редактирование мета полей короткой ссылки
+ * */
 function save_short_link_meta($post_id) {
     if (array_key_exists('original_url', $_POST)) {
         update_post_meta($post_id, '_original_url', esc_url_raw($_POST['original_url']));
@@ -63,7 +71,6 @@ function save_short_link_meta($post_id) {
     if (array_key_exists('custom_slug', $_POST)) {
         update_post_meta($post_id, '_custom_slug', sanitize_title($_POST['custom_slug']));
     }
-    //flush_rewrite_rules();
 }
 add_action('save_post', 'save_short_link_meta');
 

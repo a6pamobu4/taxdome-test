@@ -4,6 +4,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+/**
+ * Rewrite rules для переходов 
+ * */
 function short_links_rewrite_rules() {
     global $wpdb;
     $slugs = $wpdb->get_col("SELECT meta_value FROM {$wpdb->prefix}postmeta WHERE meta_key = '_custom_slug'");
@@ -20,6 +23,9 @@ function short_links_query_vars($vars) {
 }
 add_filter('query_vars', 'short_links_query_vars');
 
+/**
+ * Обработка переходов
+ * */
 function short_links_template_redirect() {
     $slug = get_query_var('short_link_redirect');
 
@@ -33,8 +39,9 @@ function short_links_template_redirect() {
 
         if ($query->have_posts()) {
             $query->the_post();
+            $post_id = get_the_ID();
             $original_url = get_post_meta(get_the_ID(), '_original_url', true);
-            cslg_log_click($slug);
+            cslg_log_click($post_id);
             wp_redirect(esc_url_raw($original_url), 301);
             exit;
         }
@@ -42,6 +49,9 @@ function short_links_template_redirect() {
 }
 add_action('template_redirect', 'short_links_template_redirect');
 
+/**
+ * Создание таблицы БД для переходов
+ * */
 function cslg_create_click_logs_table() {
     global $wpdb;
     $table_name = $wpdb->prefix . 'cslg_click_logs';
@@ -50,11 +60,12 @@ function cslg_create_click_logs_table() {
 
     $sql = "CREATE TABLE $table_name (
         id BIGINT(20) NOT NULL AUTO_INCREMENT,
-        short_slug VARCHAR(255) NOT NULL,
+        post_id BIGINT(20) NOT NULL,
         click_time DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
         ip_address VARCHAR(45) NOT NULL,
         referrer TEXT DEFAULT NULL,
-        PRIMARY KEY (id)
+        PRIMARY KEY (id),
+        KEY post_id (post_id)
     ) $charset_collate;";
 
     require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -62,14 +73,17 @@ function cslg_create_click_logs_table() {
 }
 register_activation_hook(__FILE__, 'cslg_create_click_logs_table');
 
-function cslg_log_click($slug) {
+/**
+ * Сохранение данных перехода
+ * */
+function cslg_log_click($post_id) {
     global $wpdb;
     $table_name = $wpdb->prefix . 'cslg_click_logs';
     $ip_address = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
     $referrer = $_SERVER['HTTP_REFERER'] ?? null;
 
     $wpdb->insert($table_name, [
-        'short_slug'  => $slug,
+        'post_id'     => $post_id,
         'ip_address'  => $ip_address,
         'referrer'    => $referrer,
     ]);
