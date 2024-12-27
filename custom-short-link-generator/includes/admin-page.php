@@ -1,6 +1,7 @@
 <?php
 function cslg_admin_menu() {
-    add_menu_page(
+    add_submenu_page(
+        'tools.php',
         'Сокращатель ссылок',
         'Сокращатель ссылок',
         'manage_options',
@@ -74,8 +75,8 @@ function cslg_handle_delete_action() {
         // Удаление короткой ссылки
         if (wp_delete_post($element_id, true)) {
             flush_rewrite_rules();
-            error_log('Redirecting to: ' . admin_url('admin.php?page=short_link_generator&message=deleted'));
-            wp_redirect(admin_url('admin.php?page=short_link_generator&message=deleted'));
+            error_log('Redirecting to: ' . admin_url('tools.php?page=short_link_generator&message=deleted'));
+            wp_redirect(admin_url('tools.php?page=short_link_generator&message=deleted'));
             exit;
         } else {
             wp_die(__('Не удалось удалить короткую ссылку.'));
@@ -133,7 +134,7 @@ function cslg_display_click_details($short_link_id) {
             </tbody>
         </table>
 
-        <p><a href="<?php echo esc_url(admin_url('admin.php?page=short_link_generator')); ?>" class="button">Назад к списку коротких ссылок</a></p>
+        <p><a href="<?php echo esc_url(admin_url('tools.php?page=short_link_generator')); ?>" class="button">Назад к списку коротких ссылок</a></p>
     </div>
     <?php
 }

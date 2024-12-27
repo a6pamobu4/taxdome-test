@@ -116,13 +116,13 @@ class CSLG_Short_Links_Table extends WP_List_Table {
     // Редактирование и удаление ссылок
     public function column_name($item) {
         // Link to the click details page
-        $details_link = admin_url('admin.php?page=short_link_generator&view=details&short_link_id=' . $item['id']);
+        $details_link = admin_url('tools.php?page=short_link_generator&view=details&short_link_id=' . $item['id']);
 
         // Link to the edit post page
         $edit_link = admin_url('post.php?post=' . $item['id'] . '&action=edit');
 
         // Link to delete the short link with nonce
-        $delete_link = admin_url('admin.php?page=short_link_generator&action=delete&element=' . $item['id'] . '&_wpnonce=' . wp_create_nonce('delete_short_link'));
+        $delete_link = admin_url('tools.php?page=short_link_generator&action=delete&element=' . $item['id'] . '&_wpnonce=' . wp_create_nonce('delete_short_link'));
 
         // Format the actions
         $actions = [
